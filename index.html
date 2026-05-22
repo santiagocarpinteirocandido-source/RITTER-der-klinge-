@@ -5,777 +5,644 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ritter der Klinge</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#07040a;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Cinzel',serif;overflow:hidden;}
+#title{color:#c8a84b;font-size:1.8rem;font-weight:700;letter-spacing:4px;text-shadow:0 0 20px #8b6914;margin-bottom:10px;}
+#ui-bar{display:flex;align-items:center;gap:28px;margin-bottom:8px;padding:7px 20px;background:rgba(0,0,0,0.65);border:1px solid #3a2208;border-radius:4px;}
+.stat-label{color:#6a5530;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+.stat-val{color:#c8a84b;font-size:17px;font-weight:700;}
+#hp-bar-wrap{background:#150606;border:1px solid #5a1010;border-radius:3px;width:150px;height:11px;overflow:hidden;}
+#hp-bar{height:100%;background:linear-gradient(90deg,#8b1a1a,#d42020);transition:width 0.2s;border-radius:3px;}
+#coin-bar{color:#f0d060;font-size:13px;font-weight:600;letter-spacing:1px;}
+canvas{border:2px solid #1a0e04;display:block;box-shadow:0 0 40px rgba(200,168,75,0.12),0 0 80px rgba(0,0,0,0.8);}
+#controls{color:#4a3a20;font-size:10px;letter-spacing:1px;margin-top:6px;text-align:center;}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── OVERLAY SYSTEM ── */
+.screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:20;}
+.screen.active{display:flex;}
+.panel{background:linear-gradient(160deg,#0e0a04 0%,#150d06 60%,#0a0608 100%);border:1px solid #3a2408;border-radius:6px;padding:36px 44px;display:flex;flex-direction:column;align-items:center;gap:18px;box-shadow:0 0 60px rgba(0,0,0,0.9),inset 0 0 40px rgba(200,168,75,0.03);}
+.panel-wide{width:740px;padding:28px 32px;}
+.screen-bg{position:absolute;inset:0;background:rgba(0,0,0,0.82);}
+.panel{position:relative;z-index:1;}
 
-  body {
-    background: #0a0608;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    font-family: 'Cinzel', serif;
-    overflow: hidden;
-  }
+h1.logo{color:#c8a84b;font-size:2.4rem;font-weight:700;letter-spacing:6px;text-shadow:0 0 30px #8b6914;text-align:center;}
+h2.screen-title{color:#c8a84b;font-size:1.8rem;font-weight:700;letter-spacing:5px;text-shadow:0 0 20px #8b6914;text-align:center;}
+.sub{color:#6a5530;font-size:12px;letter-spacing:2px;text-align:center;}
+.divider{width:260px;height:1px;background:linear-gradient(90deg,transparent,#3a2408,transparent);}
 
-  #title {
-    color: #c8a84b;
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: 4px;
-    text-shadow: 0 0 20px #8b6914, 0 2px 4px #000;
-    margin-bottom: 12px;
-  }
+/* Buttons */
+.btn{background:#0e0804;border:1.5px solid #c8a84b;color:#c8a84b;padding:11px 36px;font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;cursor:pointer;transition:all 0.18s;text-transform:uppercase;border-radius:3px;}
+.btn:hover{background:#c8a84b;color:#07040a;}
+.btn-red{border-color:#aa3322;color:#cc4433;}
+.btn-red:hover{background:#aa3322;color:#fff;}
+.btn-gray{border-color:#3a3228;color:#5a4a38;}
+.btn-gray:hover{background:#2a2018;color:#8a7050;}
+.btn-sm{padding:8px 20px;font-size:11px;}
+.btn-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
 
-  #ui-bar {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    margin-bottom: 10px;
-    padding: 8px 24px;
-    background: rgba(0,0,0,0.6);
-    border: 1px solid #4a3010;
-    border-radius: 4px;
-  }
+/* Game over stats */
+.go-stats{display:flex;gap:28px;}
+.go-stat{text-align:center;}
+.go-stat .val{color:#c8a84b;font-size:1.5rem;font-weight:700;}
+.go-stat .lbl{color:#6a5530;font-size:10px;letter-spacing:2px;}
+.coins-earned{color:#f0d060;font-size:1.1rem;font-weight:600;letter-spacing:2px;}
 
-  .stat-label {
-    color: #8a7040;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-
-  .stat-val {
-    color: #c8a84b;
-    font-size: 18px;
-    font-weight: 700;
-  }
-
-  #hp-bar-wrap {
-    background: #1a0a0a;
-    border: 1px solid #5a1010;
-    border-radius: 3px;
-    width: 160px;
-    height: 12px;
-    overflow: hidden;
-  }
-
-  #hp-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #8b1a1a, #d42020);
-    transition: width 0.2s;
-    border-radius: 3px;
-  }
-
-  #wave-label { color: #c8a84b; font-size: 14px; }
-
-  canvas {
-    border: 2px solid #2a1a08;
-    display: block;
-    box-shadow: 0 0 40px rgba(200,168,75,0.15), 0 0 80px rgba(0,0,0,0.8);
-  }
-
-  #controls {
-    color: #5a4a30;
-    font-size: 11px;
-    letter-spacing: 1px;
-    margin-top: 8px;
-    text-align: center;
-  }
-
-  #overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-  }
-
-  #overlay h2 {
-    color: #c8a84b;
-    font-size: 2.5rem;
-    letter-spacing: 6px;
-    text-shadow: 0 0 30px #8b6914;
-    margin-bottom: 16px;
-  }
-
-  #overlay p {
-    color: #8a7040;
-    font-size: 14px;
-    letter-spacing: 2px;
-    margin-bottom: 32px;
-  }
-
-  #overlay .score-display {
-    color: #c8a84b;
-    font-size: 1.2rem;
-    margin-bottom: 8px;
-  }
-
-  #start-btn {
-    background: #1a0e04;
-    border: 2px solid #c8a84b;
-    color: #c8a84b;
-    padding: 12px 40px;
-    font-family: 'Cinzel', serif;
-    font-size: 14px;
-    letter-spacing: 3px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-transform: uppercase;
-  }
-
-  #start-btn:hover {
-    background: #c8a84b;
-    color: #0a0608;
-  }
+/* ── SHOP ── */
+#shop-coins{color:#f0d060;font-size:1rem;font-weight:600;letter-spacing:2px;border:1px solid #4a3a10;padding:6px 20px;border-radius:3px;background:rgba(0,0,0,0.4);}
+.skins-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:4px;}
+.skin-card{background:#0a0806;border:1.5px solid #2a1e0a;border-radius:5px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.2s;}
+.skin-card:hover{border-color:#4a3820;}
+.skin-card.owned{border-color:#2a4a20;}
+.skin-card.equipped{border-color:#c8a84b;background:#0e0c06;}
+.skin-card canvas{border-radius:3px;}
+.skin-name{color:#a09060;font-size:10px;letter-spacing:2px;text-align:center;text-transform:uppercase;}
+.skin-price{color:#f0d060;font-size:11px;font-weight:600;}
+.skin-price.owned-lbl{color:#4a8a30;font-size:10px;}
+.skin-price.equipped-lbl{color:#c8a84b;font-size:10px;letter-spacing:1px;}
+.skin-btn{background:#0a0806;border:1px solid #c8a84b;color:#c8a84b;padding:5px 14px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;cursor:pointer;border-radius:2px;transition:all 0.15s;}
+.skin-btn:hover{background:#c8a84b;color:#07040a;}
+.skin-btn.equip-btn{border-color:#4a8a30;color:#4a8a30;}
+.skin-btn.equip-btn:hover{background:#4a8a30;color:#fff;}
+.skin-btn.cant-afford{border-color:#3a2820;color:#3a2820;cursor:not-allowed;}
+.skin-btn.cant-afford:hover{background:transparent;color:#3a2820;}
+.equipped-badge{background:#c8a84b;color:#07040a;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:2px;font-weight:700;}
 </style>
 </head>
 <body>
 
 <div id="title">⚔ Ritter der Klinge ⚔</div>
-
 <div id="ui-bar">
-  <div>
-    <div class="stat-label">Leben</div>
-    <div id="hp-bar-wrap"><div id="hp-bar" style="width:100%"></div></div>
-  </div>
-  <div>
-    <div class="stat-label">Punkte</div>
-    <div class="stat-val" id="score-el">0</div>
-  </div>
-  <div>
-    <div class="stat-label">Welle</div>
-    <div class="stat-val" id="wave-el">1</div>
-  </div>
-  <div>
-    <div class="stat-label">Gegner</div>
-    <div class="stat-val" id="enemies-el">0</div>
-  </div>
+  <div><div class="stat-label">Leben</div><div id="hp-bar-wrap"><div id="hp-bar" style="width:100%"></div></div></div>
+  <div><div class="stat-label">Punkte</div><div class="stat-val" id="score-el">0</div></div>
+  <div><div class="stat-label">Welle</div><div class="stat-val" id="wave-el">1</div></div>
+  <div><div class="stat-label">Gegner</div><div class="stat-val" id="enemies-el">0</div></div>
+  <div><div class="stat-label">Münzen</div><div class="stat-val" id="coin-bar">🪙 0</div></div>
 </div>
 
 <canvas id="canvas" width="800" height="450"></canvas>
-
 <div id="controls">WASD / Pfeiltasten = Bewegen &nbsp;|&nbsp; J / Leertaste = Angriff &nbsp;|&nbsp; K = Ausweichen</div>
 
-<div id="overlay">
-  <h2 id="overlay-title">RITTER DER KLINGE</h2>
-  <p id="overlay-sub">Verteidige das Königreich gegen die feindliche Horde!</p>
-  <div class="score-display" id="final-score" style="display:none"></div>
-  <button id="start-btn" onclick="startGame()">SPIEL STARTEN</button>
+<!-- MAIN MENU -->
+<div class="screen active" id="screen-menu">
+  <div class="screen-bg"></div>
+  <div class="panel">
+    <h1 class="logo">⚔ RITTER DER KLINGE ⚔</h1>
+    <p class="sub">Verteidige das Königreich gegen die feindliche Horde!</p>
+    <div class="divider"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="startGame()">SPIEL STARTEN</button>
+      <button class="btn btn-gray" onclick="openShop('menu')">🛒 SHOP</button>
+    </div>
+    <p class="sub" style="margin-top:4px;">🪙 Münzen: <span id="menu-coins" style="color:#f0d060">0</span></p>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div class="screen" id="screen-gameover">
+  <div class="screen-bg"></div>
+  <div class="panel">
+    <h2 class="screen-title">⚔ GEFALLEN ⚔</h2>
+    <p class="sub">Der Ritter ist dem Feind erlegen...</p>
+    <div class="divider"></div>
+    <div class="go-stats">
+      <div class="go-stat"><div class="val" id="go-score">0</div><div class="lbl">Punkte</div></div>
+      <div class="go-stat"><div class="val" id="go-wave">1</div><div class="lbl">Welle</div></div>
+      <div class="go-stat"><div class="val" id="go-kills">0</div><div class="lbl">Kills</div></div>
+    </div>
+    <div class="coins-earned" id="go-coins-earned">🪙 +0 Münzen verdient</div>
+    <p class="sub" id="go-total-coins">Gesamt: 0 🪙</p>
+    <div class="divider"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="startGame()">NOCHMALS KÄMPFEN</button>
+      <button class="btn btn-gray" onclick="openShop('gameover')">🛒 ZUM SHOP</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP -->
+<div class="screen" id="screen-shop">
+  <div class="screen-bg"></div>
+  <div class="panel panel-wide">
+    <h2 class="screen-title">⚔ RÜSTUNGS-SHOP ⚔</h2>
+    <div id="shop-coins">🪙 0 Münzen</div>
+    <div class="skins-grid" id="skins-grid"></div>
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="btn btn-gray" id="shop-back-btn">← ZURÜCK</button>
+      <button class="btn" onclick="startGame()">SPIEL STARTEN</button>
+    </div>
+  </div>
 </div>
 
 <script>
+// ══════════════════════════════
+//  PERSISTENCE
+// ══════════════════════════════
+function loadData(){
+  try{
+    return JSON.parse(localStorage.getItem('ritter_data')||'{}');
+  }catch(e){return{};}
+}
+function saveData(d){ try{localStorage.setItem('ritter_data',JSON.stringify(d));}catch(e){} }
+
+let pdata = loadData();
+if(!pdata.coins) pdata.coins = 0;
+if(!pdata.owned) pdata.owned = ['standard'];
+if(!pdata.equipped) pdata.equipped = 'standard';
+saveData(pdata);
+
+// ══════════════════════════════
+//  SKIN DEFINITIONS
+// ══════════════════════════════
+const SKINS = [
+  { id:'standard',  name:'Königsritter',     price:0,    color:'#5577bb', armor:'#7799cc', crest:'#cc2222', shield:'#7799cc', blade:'#dde8f0', bladeShine:'#c8a84b', belt:'#442200', desc:'Standard' },
+  { id:'rot',       name:'Roter Ritter',      price:150,  color:'#8b1a1a', armor:'#c02020', crest:'#ffd700', shield:'#c02020', blade:'#ff9090', bladeShine:'#ffd700', belt:'#2a1000', desc:'150 🪙' },
+  { id:'gold',      name:'Goldener Ritter',   price:350,  color:'#7a6010', armor:'#c8a84b', crest:'#ffffff', shield:'#c8a84b', blade:'#fff8c0', bladeShine:'#ffffff', belt:'#3a2000', desc:'350 🪙' },
+  { id:'schwarz',   name:'Schwarzer Ritter',  price:600,  color:'#111118', armor:'#222230', crest:'#9900ff', shield:'#222230', blade:'#8888bb', bladeShine:'#9900ff', belt:'#060608', desc:'600 🪙' },
+  { id:'drache',    name:'Drachenkämpfer',    price:1000, color:'#1a4a10', armor:'#2a7a18', crest:'#ff6600', shield:'#2a7a18', blade:'#88ff88', bladeShine:'#ff6600', belt:'#0a2008', desc:'1000 🪙' },
+  { id:'schatten',  name:'Schattenkämpfer',   price:2000, color:'#2a0a3a', armor:'#440a60', crest:'#00eeff', shield:'#440a60', blade:'#cc88ff', bladeShine:'#00eeff', belt:'#10041a', desc:'2000 🪙' },
+];
+
+// ══════════════════════════════
+//  CANVAS SETUP
+// ══════════════════════════════
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
 let gameState = 'menu';
-let player, enemies, particles, score, wave, frameCount, spawnTimer, spawnInterval;
+let player, enemies, particles, score, wave, frameCount, spawnTimer, spawnInterval, kills;
 let keys = {};
+let shopFrom = 'menu';
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
-  if ((e.code === 'Space' || e.code === 'KeyJ') && gameState === 'playing') {
-    e.preventDefault();
-    playerAttack();
-  }
-  if (e.code === 'KeyK' && gameState === 'playing') dodge();
+  if((e.code==='Space'||e.code==='KeyJ')&&gameState==='playing'){e.preventDefault();playerAttack();}
+  if(e.code==='KeyK'&&gameState==='playing') dodge();
 });
 document.addEventListener('keyup', e => keys[e.code] = false);
 
-function startGame() {
-  document.getElementById('overlay').style.display = 'none';
-  gameState = 'playing';
-  score = 0;
-  wave = 1;
-  frameCount = 0;
-  spawnTimer = 0;
-  spawnInterval = 180;
-  enemies = [];
-  particles = [];
+// ══════════════════════════════
+//  SCREEN HELPERS
+// ══════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  if(id) document.getElementById(id).classList.add('active');
+}
 
-  player = {
-    x: 150, y: H/2,
-    w: 32, h: 48,
-    vx: 0, vy: 0,
-    hp: 100, maxHp: 100,
-    speed: 3,
-    attackCooldown: 0,
-    attackDuration: 0,
-    dodgeCooldown: 0,
-    dodgeDuration: 0,
-    dodgeDir: 0,
-    invincible: 0,
-    facing: 1,
-    color: '#6688cc',
-    armorColor: '#8899dd',
-    swordAngle: 0,
-    swordSwing: 0,
-    dead: false
+function openShop(from){
+  shopFrom = from;
+  document.getElementById('shop-back-btn').onclick = ()=>{
+    if(from==='gameover') showScreen('screen-gameover');
+    else showScreen('screen-menu');
   };
+  renderShop();
+  showScreen('screen-shop');
+}
 
+function updateMenuCoins(){
+  document.getElementById('menu-coins').textContent = pdata.coins;
+}
+updateMenuCoins();
+
+// ══════════════════════════════
+//  SHOP RENDERING
+// ══════════════════════════════
+function renderShop(){
+  document.getElementById('shop-coins').textContent = '🪙 ' + pdata.coins + ' Münzen';
+  const grid = document.getElementById('skins-grid');
+  grid.innerHTML = '';
+  SKINS.forEach(skin=>{
+    const owned = pdata.owned.includes(skin.id);
+    const equipped = pdata.equipped === skin.id;
+    const card = document.createElement('div');
+    card.className = 'skin-card' + (owned?' owned':'') + (equipped?' equipped':'');
+
+    // Mini canvas preview
+    const mc = document.createElement('canvas');
+    mc.width = 80; mc.height = 90;
+    mc.style.background = '#0a0806';
+    drawSkinPreview(mc.getContext('2d'), skin, 40, 60);
+    card.appendChild(mc);
+
+    const nm = document.createElement('div');
+    nm.className = 'skin-name';
+    nm.textContent = skin.name;
+    card.appendChild(nm);
+
+    if(equipped){
+      const badge = document.createElement('div');
+      badge.className = 'equipped-badge';
+      badge.textContent = 'AUSGERÜSTET';
+      card.appendChild(badge);
+    } else if(owned){
+      const eb = document.createElement('button');
+      eb.className = 'skin-btn equip-btn';
+      eb.textContent = 'Ausrüsten';
+      eb.onclick = ()=>{ pdata.equipped=skin.id; saveData(pdata); renderShop(); };
+      card.appendChild(eb);
+    } else {
+      const pr = document.createElement('div');
+      pr.className = 'skin-price';
+      pr.textContent = skin.desc;
+      card.appendChild(pr);
+      const bb = document.createElement('button');
+      const canAfford = pdata.coins >= skin.price;
+      bb.className = 'skin-btn' + (canAfford?'':' cant-afford');
+      bb.textContent = canAfford ? 'Kaufen' : 'Zu wenig 🪙';
+      bb.onclick = ()=>{
+        if(!canAfford) return;
+        pdata.coins -= skin.price;
+        pdata.owned.push(skin.id);
+        pdata.equipped = skin.id;
+        saveData(pdata);
+        renderShop();
+      };
+      card.appendChild(bb);
+    }
+    grid.appendChild(card);
+  });
+}
+
+function drawSkinPreview(c, skin, x, y){
+  c.save();
+  c.translate(x, y);
+  // Shadow
+  c.fillStyle='rgba(0,0,0,0.5)';
+  c.ellipse(0,20,14,4,0,0,Math.PI*2); c.fill();
+  // Legs
+  c.fillStyle='#334'; c.fillRect(-7,8,6,14); c.fillRect(1,8,6,14);
+  // Boots
+  c.fillStyle='#221a10'; c.fillRect(-8,18,7,6); c.fillRect(1,18,7,6);
+  // Body
+  c.fillStyle=skin.color; c.fillRect(-10,-7,20,17);
+  c.fillStyle=skin.armor; c.fillRect(-8,-5,16,13);
+  // Belt
+  c.fillStyle=skin.belt; c.fillRect(-10,6,20,4);
+  // Shield
+  c.fillStyle=skin.shield; c.fillRect(-16,-7,7,16);
+  c.fillStyle=skin.bladeShine; c.fillRect(-14,-2,3,3);
+  // Arm
+  c.fillStyle=skin.armor; c.fillRect(9,-5,7,14);
+  // Sword
+  c.save(); c.translate(13,2); c.rotate(-0.3);
+  c.fillStyle='#5a3a10'; c.fillRect(-2,-3,4,8);
+  c.fillStyle=skin.bladeShine; c.fillRect(-5,-5,10,3);
+  c.fillStyle=skin.blade; c.fillRect(-2,-28,4,24);
+  c.fillStyle=skin.bladeShine; c.fillRect(-1,-28,2,24);
+  c.fillStyle=skin.blade;
+  c.beginPath(); c.moveTo(-2,-28); c.lineTo(2,-28); c.lineTo(0,-38); c.fill();
+  c.restore();
+  // Head
+  c.fillStyle=skin.armor; c.fillRect(-9,-22,18,17);
+  c.beginPath(); c.arc(0,-22,9,Math.PI,0); c.fill();
+  c.fillStyle='#1a1a2a'; c.fillRect(-7,-19,14,5);
+  // Crest
+  c.fillStyle=skin.crest; c.fillRect(-1,-33,2,13);
+  c.restore();
+}
+
+// ══════════════════════════════
+//  GAME START
+// ══════════════════════════════
+function startGame(){
+  showScreen(null);
+  gameState = 'playing';
+  score = 0; wave = 1; frameCount = 0;
+  spawnTimer = 0; spawnInterval = 180;
+  enemies = []; particles = []; kills = 0;
+
+  const skin = SKINS.find(s=>s.id===pdata.equipped) || SKINS[0];
+  player = {
+    x:150, y:H/2, hp:100, maxHp:100, speed:3,
+    attackCooldown:0, attackDuration:0,
+    dodgeCooldown:0, dodgeDuration:0, dodgeDir:0,
+    invincible:0, facing:1,
+    color:skin.color, armorColor:skin.armor,
+    crest:skin.crest, shield:skin.shield,
+    blade:skin.blade, bladeShine:skin.bladeShine,
+    belt:skin.belt,
+    swordAngle:0, swordSwing:0, dead:false
+  };
   updateUI();
   requestAnimationFrame(loop);
 }
 
-function playerAttack() {
-  if (player.attackCooldown > 0 || player.dead) return;
-  player.attackCooldown = 35;
-  player.attackDuration = 18;
-  player.swordSwing = 1;
-
-  // Hit detection during swing
-  setTimeout(() => {
-    const sx = player.x + player.facing * 50;
-    const sy = player.y;
-    enemies.forEach(e => {
-      if (!e.dead && Math.abs(e.x - sx) < 50 && Math.abs(e.y - sy) < 40) {
-        e.hp -= 35 + Math.random() * 15 | 0;
-        e.knockback = player.facing * 8;
-        e.knockTimer = 12;
-        spawnHitParticles(e.x, e.y, '#ffaa33');
-        if (e.hp <= 0) killEnemy(e);
+// ══════════════════════════════
+//  GAME LOGIC
+// ══════════════════════════════
+function playerAttack(){
+  if(player.attackCooldown>0||player.dead) return;
+  player.attackCooldown=35; player.attackDuration=18; player.swordSwing=1;
+  setTimeout(()=>{
+    const sx=player.x+player.facing*50, sy=player.y;
+    enemies.forEach(e=>{
+      if(!e.dead&&Math.abs(e.x-sx)<50&&Math.abs(e.y-sy)<40){
+        e.hp-=35+Math.random()*15|0;
+        e.knockback=player.facing*8; e.knockTimer=12;
+        spawnHitParticles(e.x,e.y,'#ffaa33');
+        if(e.hp<=0) killEnemy(e);
       }
     });
-  }, 80);
+  },80);
 }
 
-function dodge() {
-  if (player.dodgeCooldown > 0 || player.dead) return;
-  player.dodgeCooldown = 60;
-  player.dodgeDuration = 18;
-  player.invincible = 25;
-  player.dodgeDir = player.facing;
+function dodge(){
+  if(player.dodgeCooldown>0||player.dead) return;
+  player.dodgeCooldown=60; player.dodgeDuration=18;
+  player.invincible=25; player.dodgeDir=player.facing;
 }
 
-function killEnemy(e) {
-  if (e.dead) return;
-  e.dead = true;
-  score += e.type === 'boss' ? 500 : (e.type === 'heavy' ? 150 : 50);
-  spawnDeathParticles(e.x, e.y, e.color);
+function killEnemy(e){
+  if(e.dead) return; e.dead=true; kills++;
+  const pts = e.type==='boss'?500:e.type==='heavy'?150:50;
+  score += pts;
+  // Coins: 20% of points
+  const coinGain = e.type==='boss'?25:e.type==='heavy'?8:2;
+  pdata.coins += coinGain;
+  saveData(pdata);
+  spawnDeathParticles(e.x,e.y,e.color);
   updateUI();
 }
 
-function spawnEnemy() {
-  const types = wave <= 2 ? ['normal'] :
-                wave <= 4 ? ['normal','normal','heavy'] :
-                ['normal','heavy','heavy','boss'];
-  const type = types[Math.random() * types.length | 0];
-
-  const configs = {
-    normal: { hp:60, speed:1.4, w:28, h:44, color:'#993322', armorColor:'#bb4433', size:1 },
-    heavy:  { hp:120, speed:0.9, w:34, h:50, color:'#556611', armorColor:'#778822', size:1.2 },
-    boss:   { hp:300, speed:0.7, w:42, h:58, color:'#440055', armorColor:'#661177', size:1.5 }
+function spawnEnemy(){
+  const types = wave<=2?['normal']:wave<=4?['normal','normal','heavy']:['normal','heavy','heavy','boss'];
+  const type = types[Math.random()*types.length|0];
+  const configs={
+    normal:{hp:60,speed:1.4,color:'#993322',armorColor:'#bb4433'},
+    heavy: {hp:120,speed:0.9,color:'#556611',armorColor:'#778822'},
+    boss:  {hp:300,speed:0.7,color:'#440055',armorColor:'#661177'}
   };
-  const cfg = configs[type];
-
+  const cfg=configs[type];
   enemies.push({
-    x: W + 40, y: 80 + Math.random() * (H - 160),
-    ...cfg, type,
-    maxHp: cfg.hp,
-    vx: 0, vy: 0,
-    attackCooldown: 60 + Math.random() * 60 | 0,
-    knockback: 0, knockTimer: 0,
-    dead: false,
-    wobble: Math.random() * Math.PI * 2
+    x:W+40, y:80+Math.random()*(H-160),
+    ...cfg, type, maxHp:cfg.hp,
+    attackCooldown:60+Math.random()*60|0,
+    knockback:0, knockTimer:0,
+    dead:false, wobble:Math.random()*Math.PI*2
   });
 }
 
-function updateUI() {
-  const pct = Math.max(0, player.hp / player.maxHp * 100);
-  document.getElementById('hp-bar').style.width = pct + '%';
-  document.getElementById('score-el').textContent = score;
-  document.getElementById('wave-el').textContent = wave;
-  document.getElementById('enemies-el').textContent = enemies.filter(e => !e.dead).length;
+function updateUI(){
+  const pct=Math.max(0,player.hp/player.maxHp*100);
+  document.getElementById('hp-bar').style.width=pct+'%';
+  document.getElementById('score-el').textContent=score;
+  document.getElementById('wave-el').textContent=wave;
+  document.getElementById('enemies-el').textContent=enemies.filter(e=>!e.dead).length;
+  document.getElementById('coin-bar').textContent='🪙 '+pdata.coins;
+  updateMenuCoins();
 }
 
-function spawnHitParticles(x, y, color) {
-  for (let i = 0; i < 8; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const s = 2 + Math.random() * 4;
-    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 30, color, size: 3 + Math.random()*3 });
-  }
+function spawnHitParticles(x,y,color){
+  for(let i=0;i<8;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*4;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:30,color,size:3+Math.random()*3});}
+}
+function spawnDeathParticles(x,y,color){
+  for(let i=0;i<20;i++){const a=Math.random()*Math.PI*2,s=1+Math.random()*6;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,life:50,color,size:2+Math.random()*5});}
 }
 
-function spawnDeathParticles(x, y, color) {
-  for (let i = 0; i < 20; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const s = 1 + Math.random() * 6;
-    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - 2, life: 50, color, size: 2 + Math.random()*5 });
-  }
-}
-
-function update() {
+function update(){
   frameCount++;
-  if (player.dead) return;
-
-  // Player movement
-  let dx = 0, dy = 0;
-  const sp = player.dodgeDuration > 0 ? player.speed * 3 : player.speed;
-  if (player.dodgeDuration > 0) {
-    dx = player.dodgeDir * sp;
-    player.dodgeDuration--;
-  } else {
-    if (keys['ArrowLeft'] || keys['KeyA']) { dx = -sp; player.facing = -1; }
-    if (keys['ArrowRight'] || keys['KeyD']) { dx = sp; player.facing = 1; }
-    if (keys['ArrowUp'] || keys['KeyW']) dy = -sp;
-    if (keys['ArrowDown'] || keys['KeyS']) dy = sp;
+  if(player.dead) return;
+  let dx=0,dy=0;
+  const sp=player.dodgeDuration>0?player.speed*3:player.speed;
+  if(player.dodgeDuration>0){dx=player.dodgeDir*sp;player.dodgeDuration--;}
+  else{
+    if(keys['ArrowLeft']||keys['KeyA']){dx=-sp;player.facing=-1;}
+    if(keys['ArrowRight']||keys['KeyD']){dx=sp;player.facing=1;}
+    if(keys['ArrowUp']||keys['KeyW']) dy=-sp;
+    if(keys['ArrowDown']||keys['KeyS']) dy=sp;
   }
+  player.x=Math.max(20,Math.min(W-20,player.x+dx));
+  player.y=Math.max(80,Math.min(H-80,player.y+dy));
+  if(player.attackCooldown>0) player.attackCooldown--;
+  if(player.attackDuration>0) player.attackDuration--;
+  if(player.dodgeCooldown>0) player.dodgeCooldown--;
+  if(player.invincible>0) player.invincible--;
+  if(player.attackDuration>0) player.swordAngle=Math.sin((18-player.attackDuration)/18*Math.PI)*1.8;
+  else player.swordAngle*=0.85;
 
-  player.x = Math.max(20, Math.min(W - 20, player.x + dx));
-  player.y = Math.max(80, Math.min(H - 80, player.y + dy));
-
-  if (player.attackCooldown > 0) player.attackCooldown--;
-  if (player.attackDuration > 0) player.attackDuration--;
-  if (player.dodgeCooldown > 0) player.dodgeCooldown--;
-  if (player.invincible > 0) player.invincible--;
-  if (player.swordSwing > 0) player.swordSwing -= 0.1;
-
-  // Sword angle
-  if (player.attackDuration > 0) {
-    player.swordAngle = Math.sin((18 - player.attackDuration) / 18 * Math.PI) * 1.8;
-  } else {
-    player.swordAngle *= 0.85;
-  }
-
-  // Spawn enemies
+  // Spawn
   spawnTimer++;
-  if (spawnTimer >= spawnInterval) {
-    spawnTimer = 0;
-    const aliveCount = enemies.filter(e => !e.dead).length;
-    if (aliveCount < 3 + wave) {
-      spawnEnemy();
-      spawnInterval = Math.max(60, 200 - wave * 20);
-    }
+  if(spawnTimer>=spawnInterval){
+    spawnTimer=0;
+    if(enemies.filter(e=>!e.dead).length<3+wave) spawnEnemy();
+    spawnInterval=Math.max(60,200-wave*20);
   }
+  if(frameCount%1200===0){wave++;spawnInterval=Math.max(50,200-wave*20);}
 
-  // Wave progression
-  if (frameCount % 1200 === 0) {
-    wave++;
-    spawnInterval = Math.max(50, 200 - wave * 20);
-  }
-
-  // Update enemies
-  enemies.forEach(e => {
-    if (e.dead) return;
-
-    // Knockback
-    if (e.knockTimer > 0) {
-      e.x += e.knockback;
-      e.knockTimer--;
-      e.knockback *= 0.7;
-      return;
-    }
-
-    // Move toward player
-    const dx2 = player.x - e.x;
-    const dy2 = player.y - e.y;
-    const dist = Math.sqrt(dx2*dx2 + dy2*dy2);
-    if (dist > 50) {
-      e.x += (dx2 / dist) * e.speed;
-      e.y += (dy2 / dist) * e.speed;
-    }
-
-    e.wobble += 0.1;
-
-    // Enemy attack
-    if (dist < 55) {
+  // Enemies
+  enemies.forEach(e=>{
+    if(e.dead) return;
+    if(e.knockTimer>0){e.x+=e.knockback;e.knockTimer--;e.knockback*=0.7;return;}
+    const dx2=player.x-e.x,dy2=player.y-e.y,dist=Math.sqrt(dx2*dx2+dy2*dy2);
+    if(dist>50){e.x+=dx2/dist*e.speed;e.y+=dy2/dist*e.speed;}
+    e.wobble+=0.1;
+    if(dist<55){
       e.attackCooldown--;
-      if (e.attackCooldown <= 0) {
-        e.attackCooldown = 80 + Math.random() * 40 | 0;
-        if (player.invincible <= 0) {
-          const dmg = e.type === 'boss' ? 20 : e.type === 'heavy' ? 15 : 10;
-          player.hp -= dmg;
-          player.invincible = 30;
-          spawnHitParticles(player.x, player.y, '#ff4444');
-          if (player.hp <= 0) {
-            player.hp = 0;
-            player.dead = true;
-            gameOver();
-          }
+      if(e.attackCooldown<=0){
+        e.attackCooldown=80+Math.random()*40|0;
+        if(player.invincible<=0){
+          const dmg=e.type==='boss'?20:e.type==='heavy'?15:10;
+          player.hp-=dmg; player.invincible=30;
+          spawnHitParticles(player.x,player.y,'#ff4444');
+          if(player.hp<=0){player.hp=0;player.dead=true;gameOver();}
           updateUI();
         }
       }
     }
   });
-
-  // Remove dead enemies off-screen cleanup
-  enemies = enemies.filter(e => !e.dead || e.x > -100);
-
-  // Particles
-  particles.forEach(p => {
-    p.x += p.vx; p.y += p.vy;
-    p.vy += 0.15;
-    p.life--;
-  });
-  particles = particles.filter(p => p.life > 0);
-
+  enemies=enemies.filter(e=>!e.dead||e.x>-100);
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life--;});
+  particles=particles.filter(p=>p.life>0);
   updateUI();
 }
 
-function gameOver() {
-  gameState = 'gameover';
-  setTimeout(() => {
-    const ov = document.getElementById('overlay');
-    ov.style.display = 'flex';
-    document.getElementById('overlay-title').textContent = 'GEFALLEN';
-    document.getElementById('overlay-sub').textContent = 'Der Ritter ist dem Feind erlegen...';
-    document.getElementById('final-score').style.display = 'block';
-    document.getElementById('final-score').textContent = `Punkte: ${score}  |  Welle: ${wave}`;
-    document.getElementById('start-btn').textContent = 'NOCHMALS KÄMPFEN';
-  }, 1200);
+function gameOver(){
+  gameState='gameover';
+  const coinsEarned = pdata.coins;
+  setTimeout(()=>{
+    document.getElementById('go-score').textContent = score;
+    document.getElementById('go-wave').textContent = wave;
+    document.getElementById('go-kills').textContent = kills;
+    document.getElementById('go-coins-earned').textContent = '🪙 Münzen gesamt: ' + pdata.coins;
+    document.getElementById('go-total-coins').textContent = 'Kaufe neue Rüstungen im Shop!';
+    showScreen('screen-gameover');
+  }, 1000);
 }
 
-// Drawing functions
-function drawBackground() {
-  // Sky gradient
-  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.6);
-  sky.addColorStop(0, '#0d0510');
-  sky.addColorStop(1, '#1a0d08');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, H * 0.6);
-
-  // Ground
-  const ground = ctx.createLinearGradient(0, H * 0.55, 0, H);
-  ground.addColorStop(0, '#1a1208');
-  ground.addColorStop(1, '#0d0a04');
-  ctx.fillStyle = ground;
-  ctx.fillRect(0, H * 0.55, W, H * 0.45);
-
-  // Ground line / horizon glow
-  ctx.strokeStyle = 'rgba(200,168,75,0.15)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, H * 0.56);
-  ctx.lineTo(W, H * 0.56);
-  ctx.stroke();
-
+// ══════════════════════════════
+//  DRAWING
+// ══════════════════════════════
+function drawBackground(){
+  const sky=ctx.createLinearGradient(0,0,0,H*0.6);
+  sky.addColorStop(0,'#080412'); sky.addColorStop(1,'#150d08');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.6);
+  const ground=ctx.createLinearGradient(0,H*0.55,0,H);
+  ground.addColorStop(0,'#181008'); ground.addColorStop(1,'#0a0804');
+  ctx.fillStyle=ground; ctx.fillRect(0,H*0.55,W,H*0.45);
+  ctx.strokeStyle='rgba(200,168,75,0.12)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(0,H*0.56); ctx.lineTo(W,H*0.56); ctx.stroke();
   // Stars
-  ctx.fillStyle = 'rgba(255,255,220,0.6)';
-  const starData = [[60,30],[140,15],[250,40],[390,20],[510,35],[640,12],[730,28],[80,55],[320,50],[580,60]];
-  starData.forEach(([sx,sy]) => {
-    ctx.beginPath();
-    ctx.arc(sx, sy, 1, 0, Math.PI*2);
-    ctx.fill();
+  ctx.fillStyle='rgba(255,255,220,0.6)';
+  [[60,30],[140,15],[250,40],[390,20],[510,35],[640,12],[730,28],[80,55],[320,50],[580,60]].forEach(([sx,sy])=>{
+    ctx.beginPath();ctx.arc(sx,sy,1,0,Math.PI*2);ctx.fill();
   });
-
   // Moon
-  ctx.fillStyle = '#c8c090';
-  ctx.beginPath();
-  ctx.arc(680, 60, 28, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = '#0d0510';
-  ctx.beginPath();
-  ctx.arc(670, 55, 24, 0, Math.PI*2);
-  ctx.fill();
-
-  // Castle silhouette in background
-  drawCastle(30, 160);
-  drawCastle(680, 140);
-
-  // Distant trees
-  for (let i = 0; i < 12; i++) {
-    const tx = 50 + i * 62;
-    const ty = H * 0.54;
-    const th = 30 + (i%3)*15;
-    ctx.fillStyle = '#0a1205';
-    ctx.fillRect(tx - 4, ty - th, 8, th);
-    ctx.beginPath();
-    ctx.moveTo(tx - 14, ty - th + 5);
-    ctx.lineTo(tx + 14, ty - th + 5);
-    ctx.lineTo(tx, ty - th - 20);
-    ctx.fill();
+  ctx.fillStyle='#c8c090'; ctx.beginPath(); ctx.arc(680,60,26,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#080412'; ctx.beginPath(); ctx.arc(671,56,22,0,Math.PI*2); ctx.fill();
+  // Castles
+  drawCastle(20,160); drawCastle(680,145);
+  // Trees
+  for(let i=0;i<12;i++){
+    const tx=50+i*62,ty=H*0.54,th=28+(i%3)*14;
+    ctx.fillStyle='#081005'; ctx.fillRect(tx-3,ty-th,6,th);
+    ctx.beginPath(); ctx.moveTo(tx-13,ty-th+4); ctx.lineTo(tx+13,ty-th+4); ctx.lineTo(tx,ty-th-18); ctx.fill();
   }
-
-  // Ground texture lines
-  ctx.strokeStyle = 'rgba(40,30,10,0.5)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 6; i++) {
-    const gy = H * 0.58 + i * 30;
-    ctx.beginPath();
-    ctx.moveTo(0, gy);
-    ctx.lineTo(W, gy);
-    ctx.stroke();
-  }
+  ctx.strokeStyle='rgba(30,20,8,0.5)'; ctx.lineWidth=1;
+  for(let i=0;i<5;i++){const gy=H*0.58+i*32;ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
 }
 
-function drawCastle(x, y) {
-  ctx.fillStyle = '#0a0508';
-  // Main wall
-  ctx.fillRect(x, y, 80, 80);
-  // Towers
-  ctx.fillRect(x - 15, y - 20, 30, 100);
-  ctx.fillRect(x + 65, y - 20, 30, 100);
-  // Battlements
-  for (let i = 0; i < 3; i++) {
-    ctx.fillRect(x - 15 + i*10, y - 28, 7, 10);
-    ctx.fillRect(x + 65 + i*10, y - 28, 7, 10);
-    ctx.fillRect(x + 5 + i*20, y - 8, 10, 10);
+function drawCastle(x,y){
+  ctx.fillStyle='#080407';
+  ctx.fillRect(x,y,80,80);
+  ctx.fillRect(x-14,y-18,28,98);
+  ctx.fillRect(x+66,y-18,28,98);
+  for(let i=0;i<3;i++){
+    ctx.fillRect(x-14+i*10,y-26,7,9);
+    ctx.fillRect(x+66+i*10,y-26,7,9);
+    ctx.fillRect(x+6+i*20,y-6,9,9);
   }
-  // Window
-  ctx.fillStyle = 'rgba(200,168,75,0.2)';
-  ctx.fillRect(x + 30, y + 20, 20, 28);
+  ctx.fillStyle='rgba(200,168,75,0.15)';
+  ctx.fillRect(x+30,y+22,18,26);
 }
 
-function drawKnight(p) {
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  if (p.facing < 0) ctx.scale(-1, 1);
-
-  const alpha = p.invincible > 0 && Math.floor(p.invincible / 4) % 2 === 0 ? 0.4 : 1;
-  ctx.globalAlpha = alpha;
-
+function drawKnight(p){
+  ctx.save(); ctx.translate(p.x,p.y);
+  if(p.facing<0) ctx.scale(-1,1);
+  const alpha=p.invincible>0&&Math.floor(p.invincible/4)%2===0?0.35:1;
+  ctx.globalAlpha=alpha;
   // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.ellipse(0, 24, 18, 6, 0, 0, Math.PI*2);
-  ctx.fill();
-
+  ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(0,24,18,6,0,0,Math.PI*2); ctx.fill();
   // Legs
-  ctx.fillStyle = '#334';
-  ctx.fillRect(-8, 10, 7, 18);
-  ctx.fillRect(1, 10, 7, 18);
-
-  // Boots
-  ctx.fillStyle = '#221a10';
-  ctx.fillRect(-9, 22, 8, 7);
-  ctx.fillRect(1, 22, 8, 7);
-
-  // Body / armor
-  ctx.fillStyle = p.color;
-  ctx.fillRect(-11, -8, 22, 20);
-  // Chest plate
-  ctx.fillStyle = p.armorColor;
-  ctx.fillRect(-9, -6, 18, 16);
-  // Belt
-  ctx.fillStyle = '#442200';
-  ctx.fillRect(-11, 8, 22, 4);
-
-  // Shield (left arm)
-  ctx.fillStyle = '#8899dd';
-  ctx.fillRect(-18, -8, 8, 20);
-  ctx.fillStyle = '#c8a84b';
-  ctx.fillRect(-16, -2, 4, 4);
-
-  // Right arm
-  ctx.fillStyle = p.armorColor;
-  ctx.fillRect(10, -6, 8, 16);
-
-  // Sword
-  ctx.save();
-  ctx.translate(14, 2);
-  ctx.rotate(p.swordAngle * p.facing - 0.3);
-  // Handle
-  ctx.fillStyle = '#5a3a10';
-  ctx.fillRect(-2, -4, 4, 10);
-  // Guard
-  ctx.fillStyle = '#c8a84b';
-  ctx.fillRect(-6, -6, 12, 3);
-  // Blade
-  ctx.fillStyle = '#dde8f0';
-  ctx.fillRect(-2, -36, 4, 32);
-  ctx.fillStyle = '#c8a84b';
-  ctx.fillRect(-1, -36, 2, 32);
-  // Tip
-  ctx.fillStyle = '#dde8f0';
-  ctx.beginPath();
-  ctx.moveTo(-2, -36);
-  ctx.lineTo(2, -36);
-  ctx.lineTo(0, -48);
-  ctx.fill();
-  // Swing trail
-  if (p.attackDuration > 0) {
-    ctx.globalAlpha = p.attackDuration / 18 * 0.5;
-    ctx.strokeStyle = '#c8d8ff';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, 44, -Math.PI*0.8, -Math.PI*0.1);
-    ctx.stroke();
-    ctx.globalAlpha = alpha;
-  }
-  ctx.restore();
-
-  // Head / helmet
-  ctx.fillStyle = p.armorColor;
-  ctx.fillRect(-10, -26, 20, 20);
-  // Helmet top
-  ctx.beginPath();
-  ctx.arc(0, -26, 10, Math.PI, 0);
-  ctx.fill();
-  // Visor
-  ctx.fillStyle = '#1a1a2a';
-  ctx.fillRect(-8, -22, 16, 6);
-  // Helmet crest
-  ctx.fillStyle = '#cc2222';
-  ctx.fillRect(-1, -38, 2, 14);
-
-  ctx.globalAlpha = 1;
-  ctx.restore();
-}
-
-function drawEnemy(e) {
-  if (e.dead) return;
-  ctx.save();
-  ctx.translate(e.x, e.y);
-
-  const dirX = e.x > player.x ? -1 : 1;
-  if (dirX < 0) ctx.scale(-1, 1);
-
-  const bob = Math.sin(e.wobble * 0.5) * 2;
-
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.ellipse(0, 26 + bob, 16, 5, 0, 0, Math.PI*2);
-  ctx.fill();
-
-  // Legs
-  ctx.fillStyle = '#222';
-  ctx.fillRect(-7, 12 + bob, 6, 16);
-  ctx.fillRect(1, 12 + bob, 6, 16);
-
+  ctx.fillStyle='#2a2a38'; ctx.fillRect(-8,10,7,18); ctx.fillRect(1,10,7,18);
+  ctx.fillStyle=p.belt||'#221a10'; ctx.fillRect(-9,22,8,7); ctx.fillRect(1,22,8,7);
   // Body
-  ctx.fillStyle = e.color;
-  const bw = e.type === 'boss' ? 26 : e.type === 'heavy' ? 22 : 18;
-  ctx.fillRect(-bw/2, -6 + bob, bw, 20);
-  ctx.fillStyle = e.armorColor;
-  ctx.fillRect(-bw/2 + 2, -4 + bob, bw - 4, 14);
-
-  // Weapon (axe or sword)
-  ctx.save();
-  ctx.translate(-16, 2 + bob);
-  ctx.rotate(Math.sin(e.wobble * 0.3) * 0.2 - 0.4);
-  if (e.type === 'boss') {
-    // Two-handed axe
-    ctx.fillStyle = '#886633';
-    ctx.fillRect(-2, -30, 4, 34);
-    ctx.fillStyle = '#aaaaaa';
-    ctx.beginPath();
-    ctx.moveTo(-2, -30); ctx.lineTo(-16, -18); ctx.lineTo(-14, -6); ctx.lineTo(-2, -14);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(2, -30); ctx.lineTo(16, -18); ctx.lineTo(14, -6); ctx.lineTo(2, -14);
-    ctx.fill();
-  } else {
-    // Sword / mace
-    ctx.fillStyle = '#664422';
-    ctx.fillRect(-2, -4, 4, 10);
-    ctx.fillStyle = '#888';
-    ctx.fillRect(-2, -28, 4, 26);
-    ctx.fillStyle = '#aaa';
-    ctx.fillRect(-5, -10, 10, 3);
+  ctx.fillStyle=p.color; ctx.fillRect(-11,-8,22,20);
+  ctx.fillStyle=p.armorColor; ctx.fillRect(-9,-6,18,16);
+  ctx.fillStyle=p.belt||'#442200'; ctx.fillRect(-11,8,22,4);
+  // Shield
+  ctx.fillStyle=p.shield||p.armorColor; ctx.fillRect(-18,-8,8,20);
+  ctx.fillStyle=p.bladeShine||'#c8a84b'; ctx.fillRect(-16,-2,4,4);
+  // Arm
+  ctx.fillStyle=p.armorColor; ctx.fillRect(10,-6,8,16);
+  // Sword
+  ctx.save(); ctx.translate(14,2); ctx.rotate((p.swordAngle||0)*p.facing-0.3);
+  ctx.fillStyle='#5a3a10'; ctx.fillRect(-2,-4,4,10);
+  ctx.fillStyle=p.bladeShine||'#c8a84b'; ctx.fillRect(-6,-6,12,3);
+  ctx.fillStyle=p.blade||'#dde8f0'; ctx.fillRect(-2,-36,4,32);
+  ctx.fillStyle=p.bladeShine||'#c8a84b'; ctx.fillRect(-1,-36,2,32);
+  ctx.fillStyle=p.blade||'#dde8f0';
+  ctx.beginPath(); ctx.moveTo(-2,-36); ctx.lineTo(2,-36); ctx.lineTo(0,-48); ctx.fill();
+  if(p.attackDuration>0){
+    ctx.globalAlpha=(p.attackDuration/18)*0.45;
+    ctx.strokeStyle=p.bladeShine||'#c8d8ff'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,0,44,-Math.PI*0.8,-Math.PI*0.1); ctx.stroke();
+    ctx.globalAlpha=alpha;
   }
   ctx.restore();
-
   // Head
-  const headSize = e.type === 'boss' ? 16 : e.type === 'heavy' ? 13 : 11;
-  ctx.fillStyle = e.armorColor;
-  ctx.fillRect(-headSize, -22 + bob, headSize*2, headSize*1.5);
-  ctx.beginPath();
-  ctx.arc(0, -22 + bob, headSize, Math.PI, 0);
-  ctx.fill();
+  ctx.fillStyle=p.armorColor; ctx.fillRect(-10,-26,20,20);
+  ctx.beginPath(); ctx.arc(0,-26,10,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#14141e'; ctx.fillRect(-8,-22,16,6);
+  ctx.fillStyle=p.crest||'#cc2222'; ctx.fillRect(-1,-38,2,14);
+  ctx.globalAlpha=1; ctx.restore();
+}
 
-  // Eyes (glowing)
-  ctx.fillStyle = '#ff2200';
-  ctx.fillRect(-6, -20 + bob, 4, 3);
-  ctx.fillRect(2, -20 + bob, 4, 3);
-
+function drawEnemy(e){
+  if(e.dead) return;
+  ctx.save(); ctx.translate(e.x,e.y);
+  if(e.x>player.x) ctx.scale(-1,1);
+  const bob=Math.sin(e.wobble*0.5)*2;
+  ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(0,26+bob,16,5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1e1e1e'; ctx.fillRect(-7,12+bob,6,16); ctx.fillRect(1,12+bob,6,16);
+  ctx.fillStyle=e.color;
+  const bw=e.type==='boss'?26:e.type==='heavy'?22:18;
+  ctx.fillRect(-bw/2,-6+bob,bw,20);
+  ctx.fillStyle=e.armorColor; ctx.fillRect(-bw/2+2,-4+bob,bw-4,14);
+  ctx.save(); ctx.translate(-16,2+bob); ctx.rotate(Math.sin(e.wobble*0.3)*0.2-0.4);
+  if(e.type==='boss'){
+    ctx.fillStyle='#886633'; ctx.fillRect(-2,-30,4,34);
+    ctx.fillStyle='#aaa';
+    ctx.beginPath(); ctx.moveTo(-2,-30);ctx.lineTo(-16,-18);ctx.lineTo(-14,-6);ctx.lineTo(-2,-14); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(2,-30);ctx.lineTo(16,-18);ctx.lineTo(14,-6);ctx.lineTo(2,-14); ctx.fill();
+  } else {
+    ctx.fillStyle='#664422'; ctx.fillRect(-2,-4,4,10);
+    ctx.fillStyle='#888'; ctx.fillRect(-2,-28,4,26);
+    ctx.fillStyle='#aaa'; ctx.fillRect(-5,-10,10,3);
+  }
   ctx.restore();
-
-  // HP bar
-  if (e.hp < e.maxHp) {
-    const bw2 = 40 + (e.type === 'boss' ? 20 : 0);
-    const bx = e.x - bw2/2;
-    const by = e.y - 45 - (e.type === 'boss' ? 12 : 0);
-    ctx.fillStyle = '#330000';
-    ctx.fillRect(bx, by, bw2, 5);
-    ctx.fillStyle = '#dd2200';
-    ctx.fillRect(bx, by, bw2 * Math.max(0, e.hp/e.maxHp), 5);
-    ctx.strokeStyle = '#550000';
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(bx, by, bw2, 5);
+  const hs=e.type==='boss'?16:e.type==='heavy'?13:11;
+  ctx.fillStyle=e.armorColor; ctx.fillRect(-hs,-22+bob,hs*2,hs*1.5);
+  ctx.beginPath(); ctx.arc(0,-22+bob,hs,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#ff2200'; ctx.fillRect(-6,-20+bob,4,3); ctx.fillRect(2,-20+bob,4,3);
+  ctx.restore();
+  if(e.hp<e.maxHp){
+    const bw2=40+(e.type==='boss'?20:0);
+    const bx=e.x-bw2/2,by=e.y-48-(e.type==='boss'?10:0);
+    ctx.fillStyle='#330000'; ctx.fillRect(bx,by,bw2,5);
+    ctx.fillStyle='#dd2200'; ctx.fillRect(bx,by,bw2*Math.max(0,e.hp/e.maxHp),5);
+    ctx.strokeStyle='#550000'; ctx.lineWidth=0.5; ctx.strokeRect(bx,by,bw2,5);
   }
 }
 
-function drawParticles() {
-  particles.forEach(p => {
-    ctx.globalAlpha = p.life / 50;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+function drawParticles(){
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/50; ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);
   });
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha=1;
 }
 
-function drawHUD() {
-  // Dodge cooldown indicator
-  if (player.dodgeCooldown > 0) {
-    const pct = 1 - player.dodgeCooldown / 60;
-    ctx.strokeStyle = 'rgba(100,150,255,0.5)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(player.x, player.y + 36, 12, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct);
-    ctx.stroke();
+function drawHUD(){
+  if(player.dodgeCooldown>0){
+    const pct=1-player.dodgeCooldown/60;
+    ctx.strokeStyle='rgba(100,150,255,0.5)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(player.x,player.y+36,12,-Math.PI/2,-Math.PI/2+Math.PI*2*pct); ctx.stroke();
   }
-
-  // Wave announce
-  if (frameCount % 1200 < 120 && frameCount > 0) {
-    const alpha = Math.min(1, (120 - (frameCount % 1200) % 120) / 30);
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#c8a84b';
-    ctx.font = 'bold 32px Cinzel';
-    ctx.textAlign = 'center';
-    ctx.fillText(`⚔ WELLE ${wave} ⚔`, W/2, H/2);
-    ctx.globalAlpha = 1;
-    ctx.textAlign = 'left';
+  if(frameCount%1200<120&&frameCount>0){
+    const a=Math.min(1,(120-(frameCount%1200)%120)/30);
+    ctx.globalAlpha=a; ctx.fillStyle='#c8a84b';
+    ctx.font='bold 30px Cinzel'; ctx.textAlign='center';
+    ctx.fillText('⚔ WELLE '+wave+' ⚔',W/2,H/2);
+    ctx.globalAlpha=1; ctx.textAlign='left';
   }
 }
 
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  drawBackground();
-  drawParticles();
-
-  // Sort by y for depth
-  const drawables = [player, ...enemies.filter(e=>!e.dead)].sort((a,b) => a.y - b.y);
-  drawables.forEach(d => {
-    if (d === player) drawKnight(player);
-    else drawEnemy(d);
-  });
-
-  if (gameState === 'gameover' && player.dead) {
-    drawKnight({ ...player, swordAngle: 0.8, invincible: 0 });
-  }
-
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  drawBackground(); drawParticles();
+  const drawables=[player,...enemies.filter(e=>!e.dead)].sort((a,b)=>a.y-b.y);
+  drawables.forEach(d=>{ if(d===player) drawKnight(player); else drawEnemy(d); });
   drawHUD();
 }
 
-function loop() {
-  if (gameState === 'playing' || gameState === 'gameover') {
-    if (gameState === 'playing') update();
+function loop(){
+  if(gameState==='playing'||gameState==='gameover'){
+    if(gameState==='playing') update();
     draw();
     requestAnimationFrame(loop);
   }
 }
 
-// Initial background draw in menu
-function drawMenuBg() {
-  if (gameState !== 'menu') return;
-  ctx.clearRect(0, 0, W, H);
+// ── Menu background animation ──
+function drawMenuBg(){
+  if(gameState!=='menu') return;
+  ctx.clearRect(0,0,W,H);
   drawBackground();
-  // Draw a decorative knight
-  drawKnight({
-    x: W/2, y: H/2 + 30,
-    facing: 1,
-    color: '#6688cc', armorColor: '#8899dd',
-    invincible: 0,
-    attackDuration: 0,
-    swordAngle: 0.4,
-    dodgeDuration: 0
-  });
+  const skin=SKINS.find(s=>s.id===pdata.equipped)||SKINS[0];
+  drawKnight({x:W/2,y:H/2+30,facing:1,color:skin.color,armorColor:skin.armor,
+    crest:skin.crest,shield:skin.shield,blade:skin.blade,bladeShine:skin.bladeShine,
+    belt:skin.belt,invincible:0,attackDuration:0,swordAngle:0.4,dodgeDuration:0});
   requestAnimationFrame(drawMenuBg);
 }
 drawMenuBg();
