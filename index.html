@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ritter der Klinge</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0608;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Cinzel', serif;
+    overflow: hidden;
+  }
+
+  #title {
+    color: #c8a84b;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px #8b6914, 0 2px 4px #000;
+    margin-bottom: 12px;
+  }
+
+  #ui-bar {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    margin-bottom: 10px;
+    padding: 8px 24px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #4a3010;
+    border-radius: 4px;
+  }
+
+  .stat-label {
+    color: #8a7040;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .stat-val {
+    color: #c8a84b;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  #hp-bar-wrap {
+    background: #1a0a0a;
+    border: 1px solid #5a1010;
+    border-radius: 3px;
+    width: 160px;
+    height: 12px;
+    overflow: hidden;
+  }
+
+  #hp-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #8b1a1a, #d42020);
+    transition: width 0.2s;
+    border-radius: 3px;
+  }
+
+  #wave-label { color: #c8a84b; font-size: 14px; }
+
+  canvas {
+    border: 2px solid #2a1a08;
+    display: block;
+    box-shadow: 0 0 40px rgba(200,168,75,0.15), 0 0 80px rgba(0,0,0,0.8);
+  }
+
+  #controls {
+    color: #5a4a30;
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  #overlay h2 {
+    color: #c8a84b;
+    font-size: 2.5rem;
+    letter-spacing: 6px;
+    text-shadow: 0 0 30px #8b6914;
+    margin-bottom: 16px;
+  }
+
+  #overlay p {
+    color: #8a7040;
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+
+  #overlay .score-display {
+    color: #c8a84b;
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+
+  #start-btn {
+    background: #1a0e04;
+    border: 2px solid #c8a84b;
+    color: #c8a84b;
+    padding: 12px 40px;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  #start-btn:hover {
+    background: #c8a84b;
+    color: #0a0608;
+  }
+</style>
+</head>
+<body>
+
+<div id="title">⚔ Ritter der Klinge ⚔</div>
+
+<div id="ui-bar">
+  <div>
+    <div class="stat-label">Leben</div>
+    <div id="hp-bar-wrap"><div id="hp-bar" style="width:100%"></div></div>
+  </div>
+  <div>
+    <div class="stat-label">Punkte</div>
+    <div class="stat-val" id="score-el">0</div>
+  </div>
+  <div>
+    <div class="stat-label">Welle</div>
+    <div class="stat-val" id="wave-el">1</div>
+  </div>
+  <div>
+    <div class="stat-label">Gegner</div>
+    <div class="stat-val" id="enemies-el">0</div>
+  </div>
+</div>
+
+<canvas id="canvas" width="800" height="450"></canvas>
+
+<div id="controls">WASD / Pfeiltasten = Bewegen &nbsp;|&nbsp; J / Leertaste = Angriff &nbsp;|&nbsp; K = Ausweichen</div>
+
+<div id="overlay">
+  <h2 id="overlay-title">RITTER DER KLINGE</h2>
+  <p id="overlay-sub">Verteidige das Königreich gegen die feindliche Horde!</p>
+  <div class="score-display" id="final-score" style="display:none"></div>
+  <button id="start-btn" onclick="startGame()">SPIEL STARTEN</button>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let gameState = 'menu';
+let player, enemies, particles, score, wave, frameCount, spawnTimer, spawnInterval;
+let keys = {};
+
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if ((e.code === 'Space' || e.code === 'KeyJ') && gameState === 'playing') {
+    e.preventDefault();
+    playerAttack();
+  }
+  if (e.code === 'KeyK' && gameState === 'playing') dodge();
+});
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  gameState = 'playing';
+  score = 0;
+  wave = 1;
+  frameCount = 0;
+  spawnTimer = 0;
+  spawnInterval = 180;
+  enemies = [];
+  particles = [];
+
+  player = {
+    x: 150, y: H/2,
+    w: 32, h: 48,
+    vx: 0, vy: 0,
+    hp: 100, maxHp: 100,
+    speed: 3,
+    attackCooldown: 0,
+    attackDuration: 0,
+    dodgeCooldown: 0,
+    dodgeDuration: 0,
+    dodgeDir: 0,
+    invincible: 0,
+    facing: 1,
+    color: '#6688cc',
+    armorColor: '#8899dd',
+    swordAngle: 0,
+    swordSwing: 0,
+    dead: false
+  };
+
+  updateUI();
+  requestAnimationFrame(loop);
+}
+
+function playerAttack() {
+  if (player.attackCooldown > 0 || player.dead) return;
+  player.attackCooldown = 35;
+  player.attackDuration = 18;
+  player.swordSwing = 1;
+
+  // Hit detection during swing
+  setTimeout(() => {
+    const sx = player.x + player.facing * 50;
+    const sy = player.y;
+    enemies.forEach(e => {
+      if (!e.dead && Math.abs(e.x - sx) < 50 && Math.abs(e.y - sy) < 40) {
+        e.hp -= 35 + Math.random() * 15 | 0;
+        e.knockback = player.facing * 8;
+        e.knockTimer = 12;
+        spawnHitParticles(e.x, e.y, '#ffaa33');
+        if (e.hp <= 0) killEnemy(e);
+      }
+    });
+  }, 80);
+}
+
+function dodge() {
+  if (player.dodgeCooldown > 0 || player.dead) return;
+  player.dodgeCooldown = 60;
+  player.dodgeDuration = 18;
+  player.invincible = 25;
+  player.dodgeDir = player.facing;
+}
+
+function killEnemy(e) {
+  if (e.dead) return;
+  e.dead = true;
+  score += e.type === 'boss' ? 500 : (e.type === 'heavy' ? 150 : 50);
+  spawnDeathParticles(e.x, e.y, e.color);
+  updateUI();
+}
+
+function spawnEnemy() {
+  const types = wave <= 2 ? ['normal'] :
+                wave <= 4 ? ['normal','normal','heavy'] :
+                ['normal','heavy','heavy','boss'];
+  const type = types[Math.random() * types.length | 0];
+
+  const configs = {
+    normal: { hp:60, speed:1.4, w:28, h:44, color:'#993322', armorColor:'#bb4433', size:1 },
+    heavy:  { hp:120, speed:0.9, w:34, h:50, color:'#556611', armorColor:'#778822', size:1.2 },
+    boss:   { hp:300, speed:0.7, w:42, h:58, color:'#440055', armorColor:'#661177', size:1.5 }
+  };
+  const cfg = configs[type];
+
+  enemies.push({
+    x: W + 40, y: 80 + Math.random() * (H - 160),
+    ...cfg, type,
+    maxHp: cfg.hp,
+    vx: 0, vy: 0,
+    attackCooldown: 60 + Math.random() * 60 | 0,
+    knockback: 0, knockTimer: 0,
+    dead: false,
+    wobble: Math.random() * Math.PI * 2
+  });
+}
+
+function updateUI() {
+  const pct = Math.max(0, player.hp / player.maxHp * 100);
+  document.getElementById('hp-bar').style.width = pct + '%';
+  document.getElementById('score-el').textContent = score;
+  document.getElementById('wave-el').textContent = wave;
+  document.getElementById('enemies-el').textContent = enemies.filter(e => !e.dead).length;
+}
+
+function spawnHitParticles(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 2 + Math.random() * 4;
+    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 30, color, size: 3 + Math.random()*3 });
+  }
+}
+
+function spawnDeathParticles(x, y, color) {
+  for (let i = 0; i < 20; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 1 + Math.random() * 6;
+    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - 2, life: 50, color, size: 2 + Math.random()*5 });
+  }
+}
+
+function update() {
+  frameCount++;
+  if (player.dead) return;
+
+  // Player movement
+  let dx = 0, dy = 0;
+  const sp = player.dodgeDuration > 0 ? player.speed * 3 : player.speed;
+  if (player.dodgeDuration > 0) {
+    dx = player.dodgeDir * sp;
+    player.dodgeDuration--;
+  } else {
+    if (keys['ArrowLeft'] || keys['KeyA']) { dx = -sp; player.facing = -1; }
+    if (keys['ArrowRight'] || keys['KeyD']) { dx = sp; player.facing = 1; }
+    if (keys['ArrowUp'] || keys['KeyW']) dy = -sp;
+    if (keys['ArrowDown'] || keys['KeyS']) dy = sp;
+  }
+
+  player.x = Math.max(20, Math.min(W - 20, player.x + dx));
+  player.y = Math.max(80, Math.min(H - 80, player.y + dy));
+
+  if (player.attackCooldown > 0) player.attackCooldown--;
+  if (player.attackDuration > 0) player.attackDuration--;
+  if (player.dodgeCooldown > 0) player.dodgeCooldown--;
+  if (player.invincible > 0) player.invincible--;
+  if (player.swordSwing > 0) player.swordSwing -= 0.1;
+
+  // Sword angle
+  if (player.attackDuration > 0) {
+    player.swordAngle = Math.sin((18 - player.attackDuration) / 18 * Math.PI) * 1.8;
+  } else {
+    player.swordAngle *= 0.85;
+  }
+
+  // Spawn enemies
+  spawnTimer++;
+  if (spawnTimer >= spawnInterval) {
+    spawnTimer = 0;
+    const aliveCount = enemies.filter(e => !e.dead).length;
+    if (aliveCount < 3 + wave) {
+      spawnEnemy();
+      spawnInterval = Math.max(60, 200 - wave * 20);
+    }
+  }
+
+  // Wave progression
+  if (frameCount % 1200 === 0) {
+    wave++;
+    spawnInterval = Math.max(50, 200 - wave * 20);
+  }
+
+  // Update enemies
+  enemies.forEach(e => {
+    if (e.dead) return;
+
+    // Knockback
+    if (e.knockTimer > 0) {
+      e.x += e.knockback;
+      e.knockTimer--;
+      e.knockback *= 0.7;
+      return;
+    }
+
+    // Move toward player
+    const dx2 = player.x - e.x;
+    const dy2 = player.y - e.y;
+    const dist = Math.sqrt(dx2*dx2 + dy2*dy2);
+    if (dist > 50) {
+      e.x += (dx2 / dist) * e.speed;
+      e.y += (dy2 / dist) * e.speed;
+    }
+
+    e.wobble += 0.1;
+
+    // Enemy attack
+    if (dist < 55) {
+      e.attackCooldown--;
+      if (e.attackCooldown <= 0) {
+        e.attackCooldown = 80 + Math.random() * 40 | 0;
+        if (player.invincible <= 0) {
+          const dmg = e.type === 'boss' ? 20 : e.type === 'heavy' ? 15 : 10;
+          player.hp -= dmg;
+          player.invincible = 30;
+          spawnHitParticles(player.x, player.y, '#ff4444');
+          if (player.hp <= 0) {
+            player.hp = 0;
+            player.dead = true;
+            gameOver();
+          }
+          updateUI();
+        }
+      }
+    }
+  });
+
+  // Remove dead enemies off-screen cleanup
+  enemies = enemies.filter(e => !e.dead || e.x > -100);
+
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.15;
+    p.life--;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  updateUI();
+}
+
+function gameOver() {
+  gameState = 'gameover';
+  setTimeout(() => {
+    const ov = document.getElementById('overlay');
+    ov.style.display = 'flex';
+    document.getElementById('overlay-title').textContent = 'GEFALLEN';
+    document.getElementById('overlay-sub').textContent = 'Der Ritter ist dem Feind erlegen...';
+    document.getElementById('final-score').style.display = 'block';
+    document.getElementById('final-score').textContent = `Punkte: ${score}  |  Welle: ${wave}`;
+    document.getElementById('start-btn').textContent = 'NOCHMALS KÄMPFEN';
+  }, 1200);
+}
+
+// Drawing functions
+function drawBackground() {
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.6);
+  sky.addColorStop(0, '#0d0510');
+  sky.addColorStop(1, '#1a0d08');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H * 0.6);
+
+  // Ground
+  const ground = ctx.createLinearGradient(0, H * 0.55, 0, H);
+  ground.addColorStop(0, '#1a1208');
+  ground.addColorStop(1, '#0d0a04');
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, H * 0.55, W, H * 0.45);
+
+  // Ground line / horizon glow
+  ctx.strokeStyle = 'rgba(200,168,75,0.15)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.56);
+  ctx.lineTo(W, H * 0.56);
+  ctx.stroke();
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,220,0.6)';
+  const starData = [[60,30],[140,15],[250,40],[390,20],[510,35],[640,12],[730,28],[80,55],[320,50],[580,60]];
+  starData.forEach(([sx,sy]) => {
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Moon
+  ctx.fillStyle = '#c8c090';
+  ctx.beginPath();
+  ctx.arc(680, 60, 28, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#0d0510';
+  ctx.beginPath();
+  ctx.arc(670, 55, 24, 0, Math.PI*2);
+  ctx.fill();
+
+  // Castle silhouette in background
+  drawCastle(30, 160);
+  drawCastle(680, 140);
+
+  // Distant trees
+  for (let i = 0; i < 12; i++) {
+    const tx = 50 + i * 62;
+    const ty = H * 0.54;
+    const th = 30 + (i%3)*15;
+    ctx.fillStyle = '#0a1205';
+    ctx.fillRect(tx - 4, ty - th, 8, th);
+    ctx.beginPath();
+    ctx.moveTo(tx - 14, ty - th + 5);
+    ctx.lineTo(tx + 14, ty - th + 5);
+    ctx.lineTo(tx, ty - th - 20);
+    ctx.fill();
+  }
+
+  // Ground texture lines
+  ctx.strokeStyle = 'rgba(40,30,10,0.5)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    const gy = H * 0.58 + i * 30;
+    ctx.beginPath();
+    ctx.moveTo(0, gy);
+    ctx.lineTo(W, gy);
+    ctx.stroke();
+  }
+}
+
+function drawCastle(x, y) {
+  ctx.fillStyle = '#0a0508';
+  // Main wall
+  ctx.fillRect(x, y, 80, 80);
+  // Towers
+  ctx.fillRect(x - 15, y - 20, 30, 100);
+  ctx.fillRect(x + 65, y - 20, 30, 100);
+  // Battlements
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(x - 15 + i*10, y - 28, 7, 10);
+    ctx.fillRect(x + 65 + i*10, y - 28, 7, 10);
+    ctx.fillRect(x + 5 + i*20, y - 8, 10, 10);
+  }
+  // Window
+  ctx.fillStyle = 'rgba(200,168,75,0.2)';
+  ctx.fillRect(x + 30, y + 20, 20, 28);
+}
+
+function drawKnight(p) {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  if (p.facing < 0) ctx.scale(-1, 1);
+
+  const alpha = p.invincible > 0 && Math.floor(p.invincible / 4) % 2 === 0 ? 0.4 : 1;
+  ctx.globalAlpha = alpha;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.ellipse(0, 24, 18, 6, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Legs
+  ctx.fillStyle = '#334';
+  ctx.fillRect(-8, 10, 7, 18);
+  ctx.fillRect(1, 10, 7, 18);
+
+  // Boots
+  ctx.fillStyle = '#221a10';
+  ctx.fillRect(-9, 22, 8, 7);
+  ctx.fillRect(1, 22, 8, 7);
+
+  // Body / armor
+  ctx.fillStyle = p.color;
+  ctx.fillRect(-11, -8, 22, 20);
+  // Chest plate
+  ctx.fillStyle = p.armorColor;
+  ctx.fillRect(-9, -6, 18, 16);
+  // Belt
+  ctx.fillStyle = '#442200';
+  ctx.fillRect(-11, 8, 22, 4);
+
+  // Shield (left arm)
+  ctx.fillStyle = '#8899dd';
+  ctx.fillRect(-18, -8, 8, 20);
+  ctx.fillStyle = '#c8a84b';
+  ctx.fillRect(-16, -2, 4, 4);
+
+  // Right arm
+  ctx.fillStyle = p.armorColor;
+  ctx.fillRect(10, -6, 8, 16);
+
+  // Sword
+  ctx.save();
+  ctx.translate(14, 2);
+  ctx.rotate(p.swordAngle * p.facing - 0.3);
+  // Handle
+  ctx.fillStyle = '#5a3a10';
+  ctx.fillRect(-2, -4, 4, 10);
+  // Guard
+  ctx.fillStyle = '#c8a84b';
+  ctx.fillRect(-6, -6, 12, 3);
+  // Blade
+  ctx.fillStyle = '#dde8f0';
+  ctx.fillRect(-2, -36, 4, 32);
+  ctx.fillStyle = '#c8a84b';
+  ctx.fillRect(-1, -36, 2, 32);
+  // Tip
+  ctx.fillStyle = '#dde8f0';
+  ctx.beginPath();
+  ctx.moveTo(-2, -36);
+  ctx.lineTo(2, -36);
+  ctx.lineTo(0, -48);
+  ctx.fill();
+  // Swing trail
+  if (p.attackDuration > 0) {
+    ctx.globalAlpha = p.attackDuration / 18 * 0.5;
+    ctx.strokeStyle = '#c8d8ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 44, -Math.PI*0.8, -Math.PI*0.1);
+    ctx.stroke();
+    ctx.globalAlpha = alpha;
+  }
+  ctx.restore();
+
+  // Head / helmet
+  ctx.fillStyle = p.armorColor;
+  ctx.fillRect(-10, -26, 20, 20);
+  // Helmet top
+  ctx.beginPath();
+  ctx.arc(0, -26, 10, Math.PI, 0);
+  ctx.fill();
+  // Visor
+  ctx.fillStyle = '#1a1a2a';
+  ctx.fillRect(-8, -22, 16, 6);
+  // Helmet crest
+  ctx.fillStyle = '#cc2222';
+  ctx.fillRect(-1, -38, 2, 14);
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawEnemy(e) {
+  if (e.dead) return;
+  ctx.save();
+  ctx.translate(e.x, e.y);
+
+  const dirX = e.x > player.x ? -1 : 1;
+  if (dirX < 0) ctx.scale(-1, 1);
+
+  const bob = Math.sin(e.wobble * 0.5) * 2;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.ellipse(0, 26 + bob, 16, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Legs
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-7, 12 + bob, 6, 16);
+  ctx.fillRect(1, 12 + bob, 6, 16);
+
+  // Body
+  ctx.fillStyle = e.color;
+  const bw = e.type === 'boss' ? 26 : e.type === 'heavy' ? 22 : 18;
+  ctx.fillRect(-bw/2, -6 + bob, bw, 20);
+  ctx.fillStyle = e.armorColor;
+  ctx.fillRect(-bw/2 + 2, -4 + bob, bw - 4, 14);
+
+  // Weapon (axe or sword)
+  ctx.save();
+  ctx.translate(-16, 2 + bob);
+  ctx.rotate(Math.sin(e.wobble * 0.3) * 0.2 - 0.4);
+  if (e.type === 'boss') {
+    // Two-handed axe
+    ctx.fillStyle = '#886633';
+    ctx.fillRect(-2, -30, 4, 34);
+    ctx.fillStyle = '#aaaaaa';
+    ctx.beginPath();
+    ctx.moveTo(-2, -30); ctx.lineTo(-16, -18); ctx.lineTo(-14, -6); ctx.lineTo(-2, -14);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(2, -30); ctx.lineTo(16, -18); ctx.lineTo(14, -6); ctx.lineTo(2, -14);
+    ctx.fill();
+  } else {
+    // Sword / mace
+    ctx.fillStyle = '#664422';
+    ctx.fillRect(-2, -4, 4, 10);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(-2, -28, 4, 26);
+    ctx.fillStyle = '#aaa';
+    ctx.fillRect(-5, -10, 10, 3);
+  }
+  ctx.restore();
+
+  // Head
+  const headSize = e.type === 'boss' ? 16 : e.type === 'heavy' ? 13 : 11;
+  ctx.fillStyle = e.armorColor;
+  ctx.fillRect(-headSize, -22 + bob, headSize*2, headSize*1.5);
+  ctx.beginPath();
+  ctx.arc(0, -22 + bob, headSize, Math.PI, 0);
+  ctx.fill();
+
+  // Eyes (glowing)
+  ctx.fillStyle = '#ff2200';
+  ctx.fillRect(-6, -20 + bob, 4, 3);
+  ctx.fillRect(2, -20 + bob, 4, 3);
+
+  ctx.restore();
+
+  // HP bar
+  if (e.hp < e.maxHp) {
+    const bw2 = 40 + (e.type === 'boss' ? 20 : 0);
+    const bx = e.x - bw2/2;
+    const by = e.y - 45 - (e.type === 'boss' ? 12 : 0);
+    ctx.fillStyle = '#330000';
+    ctx.fillRect(bx, by, bw2, 5);
+    ctx.fillStyle = '#dd2200';
+    ctx.fillRect(bx, by, bw2 * Math.max(0, e.hp/e.maxHp), 5);
+    ctx.strokeStyle = '#550000';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(bx, by, bw2, 5);
+  }
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life / 50;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawHUD() {
+  // Dodge cooldown indicator
+  if (player.dodgeCooldown > 0) {
+    const pct = 1 - player.dodgeCooldown / 60;
+    ctx.strokeStyle = 'rgba(100,150,255,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y + 36, 12, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct);
+    ctx.stroke();
+  }
+
+  // Wave announce
+  if (frameCount % 1200 < 120 && frameCount > 0) {
+    const alpha = Math.min(1, (120 - (frameCount % 1200) % 120) / 30);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#c8a84b';
+    ctx.font = 'bold 32px Cinzel';
+    ctx.textAlign = 'center';
+    ctx.fillText(`⚔ WELLE ${wave} ⚔`, W/2, H/2);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  drawParticles();
+
+  // Sort by y for depth
+  const drawables = [player, ...enemies.filter(e=>!e.dead)].sort((a,b) => a.y - b.y);
+  drawables.forEach(d => {
+    if (d === player) drawKnight(player);
+    else drawEnemy(d);
+  });
+
+  if (gameState === 'gameover' && player.dead) {
+    drawKnight({ ...player, swordAngle: 0.8, invincible: 0 });
+  }
+
+  drawHUD();
+}
+
+function loop() {
+  if (gameState === 'playing' || gameState === 'gameover') {
+    if (gameState === 'playing') update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+}
+
+// Initial background draw in menu
+function drawMenuBg() {
+  if (gameState !== 'menu') return;
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  // Draw a decorative knight
+  drawKnight({
+    x: W/2, y: H/2 + 30,
+    facing: 1,
+    color: '#6688cc', armorColor: '#8899dd',
+    invincible: 0,
+    attackDuration: 0,
+    swordAngle: 0.4,
+    dodgeDuration: 0
+  });
+  requestAnimationFrame(drawMenuBg);
+}
+drawMenuBg();
+</script>
+</body>
+</html>
